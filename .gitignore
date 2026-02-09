@@ -35,10 +35,9 @@ ENV/
 # Project Specific
 data/
 models/metrics/
-# Keep saved models? Maybe not large ones, but let's exclude for now to be safe with GitHub limits
 models/saved_models/*.pkl
 models/saved_models/*.json
-# Except keep empty .gitkeep if needed (not created yet)
+RESUME_CONTENT.md
 
 # Logs
 *.log
