@@ -1,0 +1,272 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fraud Detection System</title>
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-hover: #4f46e5;
+            --bg: #f3f4f6;
+            --card-bg: #ffffff;
+            --text: #1f2937;
+            --success: #10b981;
+            --danger: #ef4444;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: var(--card-bg);
+            padding: 2rem;
+            border-radius: 1rem;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+
+        h1 {
+            text-align: center;
+            color: var(--primary);
+            margin-bottom: 2rem;
+            font-weight: 700;
+        }
+
+        .controls {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            justify-content: center;
+        }
+
+        button {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 0.5rem;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-hover);
+        }
+
+        .btn-outline {
+            background-color: transparent;
+            border: 2px solid var(--primary);
+            color: var(--primary);
+        }
+
+        .btn-outline:hover {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .form-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .form-group {
+            display: flex;
+            flex-direction: column;
+        }
+
+        label {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: #6b7280;
+            margin-bottom: 0.25rem;
+        }
+
+        input {
+            padding: 0.5rem;
+            border: 1px solid #d1d5db;
+            border-radius: 0.375rem;
+            font-size: 0.875rem;
+            transition: border-color 0.2s;
+        }
+
+        input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+        }
+
+        .result-section {
+            margin-top: 2rem;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            background-color: #f9fafb;
+            text-align: center;
+            display: none;
+        }
+
+        .result-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .result-value {
+            font-size: 2rem;
+            font-weight: 800;
+        }
+
+        .safe { color: var(--success); }
+        .fraud { color: var(--danger); }
+        
+        #json-output {
+            margin-top: 1rem;
+            padding: 1rem;
+            background: #1f2937;
+            color: #10b981;
+            border-radius: 0.5rem;
+            font-family: monospace;
+            font-size: 0.8rem;
+            white-space: pre-wrap;
+            display: none;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Fraud Detection System</h1>
+        
+        <div class="controls">
+            <button class="btn-outline" onclick="fillForm(false)">Load Normal Transaction</button>
+            <button class="btn-outline" onclick="fillForm(true)">Load Fraud Transaction</button>
+        </div>
+
+        <form id="fraudForm" onsubmit="analyzeFraud(event)">
+            <div class="form-grid" id="inputs">
+                <!-- Inputs will be generated here -->
+            </div>
+            <div style="text-align: center;">
+                <button type="submit" class="btn-primary" style="width: 100%; max-width: 300px;">Analyze Risk</button>
+            </div>
+        </form>
+
+        <div id="result" class="result-section">
+            <div class="result-title">Risk Assessment</div>
+            <div id="riskText" class="result-value"></div>
+            <p id="riskProb"></p>
+        </div>
+        
+        <div id="json-output"></div>
+    </div>
+
+    <script>
+        const fields = ['Time', 'Amount', ...Array.from({length: 28}, (_, i) => `V${i+1}`)];
+        const container = document.getElementById('inputs');
+
+        // Generate inputs
+        fields.forEach(field => {
+            const group = document.createElement('div');
+            group.className = 'form-group';
+            group.innerHTML = `
+                <label for="${field}">${field}</label>
+                <input type="number" step="any" id="${field}" name="${field}" required>
+            `;
+            container.appendChild(group);
+        });
+
+        // Sample data (approximate values for demo)
+        const normalData = {
+            Time: 406.0, Amount: 50.00,
+            V1: -2.31, V2: 1.95, V3: -1.60, V4: 3.99, V5: -0.52, V6: -1.42, V7: -2.53, V8: 1.39, V9: -2.77, V10: -2.77,
+            V11: 3.20, V12: -2.89, V13: -0.59, V14: -4.28, V15: 0.38, V16: -1.14, V17: -2.83, V18: -0.01, V19: 0.41,
+            V20: 0.12, V21: 0.51, V22: -0.03, V23: -0.46, V24: 0.32, V25: 0.04, V26: 0.17, V27: 0.26, V28: -0.14
+        };
+
+        const fraudData = {
+            Time: 406.0, Amount: 0.0,
+            V1: -2.312226542, V2: 1.951992011, V3: -1.609850732, V4: 3.997905588, V5: -0.522187865, 
+            V6: -1.426545319, V7: -2.537387306, V8: 1.391657248, V9: -2.770089277, V10: -2.772272145, 
+            V11: 3.202033207, V12: -2.899907388, V13: -0.595221881, V14: -4.289253782, V15: 0.38972412,
+            V16: -1.14074718, V17: -2.830055675, V18: -0.016822468, V19: 0.416955705, V20: 0.126910559, 
+            V21: 0.517232371, V22: -0.035049369, V23: -0.465211076, V24: 0.320198199, V25: 0.044519167, 
+            V26: 0.177839798, V27: 0.261145003, V28: -0.143275875
+        };
+
+        function fillForm(isFraud) {
+            // Simple randomization to make it feel dynamic
+            const base = isFraud ? fraudData : normalData;
+            fields.forEach(field => {
+                let val = base[field] || 0;
+                // Add slight noise
+                if (field !== 'Class') {
+                     val += (Math.random() - 0.5) * 0.1;
+                }
+                document.getElementById(field).value = val.toFixed(6);
+            });
+            // Fraud amount typically low or high, let's keep as is or randomize
+            if(isFraud) document.getElementById('Amount').value = (Math.random() * 100).toFixed(2);
+             else document.getElementById('Amount').value = (Math.random() * 500 + 10).toFixed(2);
+        }
+
+        async function analyzeFraud(e) {
+            e.preventDefault();
+            const data = {};
+            fields.forEach(field => {
+                data[field] = parseFloat(document.getElementById(field).value);
+            });
+
+            try {
+                const response = await fetch('/predict', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                
+                const result = await response.json();
+                
+                const resultDiv = document.getElementById('result');
+                const riskText = document.getElementById('riskText');
+                const riskProb = document.getElementById('riskProb');
+                
+                resultDiv.style.display = 'block';
+                
+                if (result.is_fraud) {
+                    riskText.textContent = "HIGH RISK (FRAUD)";
+                    riskText.className = "result-value fraud";
+                } else {
+                    riskText.textContent = "Low Risk (Legitimate)";
+                    riskText.className = "result-value safe";
+                }
+                
+                riskProb.textContent = `Probability: ${(result.probability * 100).toFixed(2)}%`;
+                
+                // Show JSON
+                const jsonOut = document.getElementById('json-output');
+                jsonOut.style.display = 'block';
+                jsonOut.textContent = JSON.stringify(result, null, 2);
+
+            } catch (err) {
+                alert("Error analyzing transaction: " + err);
+            }
+        }
+    </script>
+</body>
+</html>
